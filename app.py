@@ -1,84 +1,46 @@
 import streamlit as st
 import whisper
-import google.generativeai as genai
-from pypdf import PdfReader
-import io
+import os
 
-# 1. 페이지 기본 설정
-st.set_page_config(page_title="슈퍼 학습 비서", page_icon="📝", layout="wide")
-st.title("🎓 AI 통합 학습 지원 시스템")
+# 페이지 설정
+st.set_page_config(page_title="강의 기록기", page_icon="🎤")
+st.title("🎤 강의 소리 -> 텍스트 변환기")
+st.write("녹음 파일을 올리면 인공지능이 그대로 글자로 적어줍니다.")
 
-# 2. 사이드바 설정 (API 키 및 퀴즈 개수)
-with st.sidebar:
-    st.header("⚙️ 설정")
-    api_key = st.secrets["GEMINI_API_KEY"]
-    st.divider()
-    quiz_count = st.slider("생성할 퀴즈 개수", 5, 50, 10)
-    st.info("퀴즈 개수가 많을수록 생성 시간이 조금 더 걸릴 수 있습니다.")
+# 파일 업로더 (오디오만)
+uploaded_file = st.file_uploader("녹음 파일(mp3, wav, m4a)을 선택하세요.", type=['mp3', 'wav', 'm4a'])
 
-# 3. 메인 탭 구성
-tab1, tab2 = st.tabs(["📄 파일 업로드 및 요약", "🧠 퀴즈 생성기"])
-
-# 세션 상태 초기화 (요약 내용을 저장하기 위함)
-if "summary_text" not in st.session_state:
-    st.session_state.summary_text = ""
-
-with tab1:
-    st.subheader("📁 강의 자료 올리기")
-    uploaded_file = st.file_uploader("녹음 파일(mp3, wav) 또는 PDF 파일을 올려주세요.", type=['mp3', 'wav', 'm4a', 'pdf'])
-
-    if uploaded_file is not None and api_key:
-        if st.button("🚀 분석 및 요약 시작"):
-            with st.spinner("내용을 분석하고 요약 리포트를 작성 중입니다..."):
-                full_text = ""
+if uploaded_file is not None:
+    st.audio(uploaded_file) # 올린 파일 들어보기
+    
+    if st.button("📝 글자로 바꾸기 시작"):
+        with st.spinner("AI가 열심히 듣고 적는 중입니다... 잠시만 기다려주세요."):
+            try:
+                # 임시 파일 저장
+                with open("temp_audio", "wb") as f:
+                    f.write(uploaded_file.getbuffer())
                 
-                # PDF 파일 처리
-                if uploaded_file.type == "application/pdf":
-                    reader = PdfReader(uploaded_file)
-                    for page in reader.pages:
-                        full_text += page.extract_text()
+                # Whisper 모델 로드 (가장 가벼운 base 모델 사용)
+                model = whisper.load_model("base")
                 
-                # 음성 파일 처리
-                else:
-                    with open("temp_audio", "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    model = whisper.load_model("base")
-                    result = model.transcribe("temp_audio")
-                    full_text = result["text"]
-
-                # Gemini를 이용한 요약
-                genai.configure(api_key=api_key)
-                ai_model = genai.GenerativeModel('gemini-2.0-flash')
+                # 받아쓰기 시작
+                result = model.transcribe("temp_audio")
+                extracted_text = result["text"]
                 
-                prompt = f"""
-                다음 자료를 바탕으로 전문적인 학습 요약본을 만들어줘. 
-                의학 및 물리치료 전공 용어는 정확하게 교정하고, 핵심 개념과 임상 적용점을 중심으로 정리해줘.
-                자료 내용: {full_text}
-                """
-                response = ai_model.generate_content(prompt)
-                st.session_state.summary_text = response.text
+                # 결과 출력
+                st.success("✅ 변환 완료!")
+                st.text_area("추출된 내용", extracted_text, height=400)
                 
-                st.success("✅ 분석 완료!")
-                st.markdown(st.session_state.summary_text)
-
-with tab2:
-    st.subheader("📝 맞춤형 자가 테스트")
-    if not st.session_state.summary_text:
-        st.warning("먼저 [파일 업로드 및 요약] 탭에서 자료를 요약해 주세요.")
-    else:
-        if st.button(f"🔥 새로운 퀴즈 {quiz_count}개 만들기"):
-            with st.spinner("중복되지 않는 새로운 문제를 출제 중입니다..."):
-                genai.configure(api_key=api_key)
-                ai_model = genai.GenerativeModel('gemini-2.0-flash')
+                # 메모장 파일로 다운로드 버튼
+                st.download_button(
+                    label="💾 메모장 파일로 저장",
+                    data=extracted_text,
+                    file_name="강의기록.txt",
+                    mime="text/plain"
+                )
                 
-                # '새로운 문제'를 강조하는 프롬프트
-                quiz_prompt = f"""
-                다음 요약본을 바탕으로 중복되지 않는 새로운 객관식 퀴즈 {quiz_count}문제를 만들어줘.
-                이전과는 다른 세부적인 개념이나 사례 중심의 문제를 출제해줘.
-                각 문제 뒤에는 정답과 상세한 해설을 포함해줘.
+                # 임시 파일 삭제
+                os.remove("temp_audio")
                 
-                [학습 요약본]
-                {st.session_state.summary_text}
-                """
-                quiz_response = ai_model.generate_content(quiz_prompt)
-                st.markdown(quiz_response.text)
+            except Exception as e:
+                st.error(f"변환 중 오류가 발생했습니다: {e}")
