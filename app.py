@@ -48,7 +48,7 @@ with tab1:
 
                 # Gemini를 이용한 요약
                 genai.configure(api_key=api_key)
-                ai_model = genai.GenerativeModel('gemini-1.5-flash')
+                ai_model = genai.GenerativeModel('gemini-1.5-flash-latest')
                 
                 prompt = f"""
                 다음 자료를 바탕으로 전문적인 학습 요약본을 만들어줘. 
@@ -69,7 +69,7 @@ with tab2:
         if st.button(f"🔥 새로운 퀴즈 {quiz_count}개 만들기"):
             with st.spinner("중복되지 않는 새로운 문제를 출제 중입니다..."):
                 genai.configure(api_key=api_key)
-                ai_model = genai.GenerativeModel('gemini-1.5-flash')
+                ai_model = genai.GenerativeModel('gemini-1.5-flash-latest')
                 
                 # '새로운 문제'를 강조하는 프롬프트
                 quiz_prompt = f"""
