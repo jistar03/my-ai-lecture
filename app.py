@@ -11,7 +11,7 @@ st.title("🎓 AI 통합 학습 지원 시스템")
 # 2. 사이드바 설정 (API 키 및 퀴즈 개수)
 with st.sidebar:
     st.header("⚙️ 설정")
-    api_key = st.text_input("Gemini API Key", type="password")
+   api_key = st.secrets["AIzaSyBcJYAt867C5FSKtFcJthT24puFHKnt1MA"]
     st.divider()
     quiz_count = st.slider("생성할 퀴즈 개수", 5, 50, 10)
     st.info("퀴즈 개수가 많을수록 생성 시간이 조금 더 걸릴 수 있습니다.")
