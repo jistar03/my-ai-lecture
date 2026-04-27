@@ -48,7 +48,7 @@ with tab1:
 
                 # Gemini를 이용한 요약
                 genai.configure(api_key=api_key)
-                ai_model = genai.GenerativeModel(gemini-2.0-flash')
+                ai_model = genai.GenerativeModel('gemini-2.0-flash')
                 
                 prompt = f"""
                 다음 자료를 바탕으로 전문적인 학습 요약본을 만들어줘. 
